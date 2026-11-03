@@ -1,0 +1,289 @@
+
+==============================================================================
+STEPH CURRY SHOT PROBABILITY ANALYSIS - 2022-2023 NBA SEASON
+==============================================================================
+Source dataset: stephen_curry_shots_2023.csv
+All probabilities are computed directly from the loaded data.
+
+==============================================================================
+STEP 1: DOWNLOAD THE DATASET
+==============================================================================
+[ok]   Dataset already present: C:\udacity\Statistics-for-Data-Analysis\Udacity_Statistics-Data-Analysis_P2_Basketball_Scoring_Probabilities\stephen_curry_shots_2023.csv
+       Size: 109,488 bytes
+[..]   Reusing the stored CSV (no re-download).
+[ok]   Row count after loading with pandas: 1,434
+[ok]   Column names: ['top', 'left', 'date', 'qtr', 'time_remaining', 'result', 'shot_type', 'distance_ft', 'lead', 'player_team_score', 'opponent_team_score', 'opponent', 'team', 'season', 'color']
+
+==============================================================================
+STEP 2: DATA INSPECTION AND CLEANING
+==============================================================================
+[ok]   Loaded: stephen_curry_shots_2023.csv
+[ok]   Rows: 1,434    Columns: 15
+[ok]   Column names: ['top', 'left', 'date', 'qtr', 'time_remaining', 'result', 'shot_type', 'distance_ft', 'lead', 'player_team_score', 'opponent_team_score', 'opponent', 'team', 'season', 'color']
+
+-- Shape --
+(1434, 15)
+
+-- dtypes (before cleaning) --
+top                    int64
+left                   int64
+date                     str
+qtr                      str
+time_remaining           str
+result                  bool
+shot_type              int64
+distance_ft            int64
+lead                    bool
+player_team_score      int64
+opponent_team_score    int64
+opponent                 str
+team                     str
+season                 int64
+color                    str
+
+-- First 5 rows (before cleaning) --
+   top  left          date      qtr time_remaining  result  shot_type  distance_ft  lead  player_team_score  opponent_team_score opponent team  season  color
+0   63   300  Oct 18, 2022  1st Qtr           7:27   False          2            6  True                  9                    6      LAL  GSW    2023    red
+1  133   389  Oct 18, 2022  1st Qtr           7:22    True          2           17  True                 11                    6      LAL  GSW    2023  green
+2  326   247  Oct 18, 2022  1st Qtr           7:11   False          3           27  True                 11                    6      LAL  GSW    2023    red
+3  249    89  Oct 18, 2022  1st Qtr           5:16   False          3           25  True                 19                   13      LAL  GSW    2023    red
+4  282   158  Oct 18, 2022  1st Qtr           3:52   False          3           24  True                 22                   17      LAL  GSW    2023    red
+
+-- Normalization applied --
+       result    -> bool   (TRUE = made, FALSE = missed)
+       lead      -> bool   (TRUE = Curry's team leading)
+       shot_type -> int    (2 = two-pointer, 3 = three-pointer)
+
+-- dtypes (after cleaning) --
+top                    int64
+left                   int64
+date                     str
+qtr                      str
+time_remaining           str
+result                  bool
+shot_type              int64
+distance_ft            int64
+lead                    bool
+player_team_score      int64
+opponent_team_score    int64
+opponent                 str
+team                     str
+season                 int64
+color                    str
+
+-- value_counts: result --
+result
+False    731
+True     703
+
+-- value_counts: shot_type --
+shot_type
+2    648
+3    786
+
+-- value_counts: lead --
+lead
+True     722
+False    712
+
+-- Missing values in key columns --
+result       0
+shot_type    0
+lead         0
+
+[ok]   Key columns are clean: only 2-pointers and 3-pointers present,
+       result/lead are boolean, and there are no missing values.
+
+==============================================================================
+STEP 3: OVERALL SHOOTING STATISTICS
+==============================================================================
+Total shots: 1,434
+
+  P(Make)      =   703 / 1,434 = 0.4902  (49.02%)
+  P(Miss)      =   731 / 1,434 = 0.5098  (50.98%)
+  P(3-pointer) =   786 / 1,434 = 0.5481  (54.81%)
+  P(2-pointer) =   648 / 1,434 = 0.4519  (45.19%)
+
+  Check: P(Make) + P(Miss)   = 1.0000
+  Check: P(3)    + P(2)      = 1.0000
+
+==============================================================================
+STEP 4: BINOMIAL DISTRIBUTION
+==============================================================================
+
+4A) P(exactly 3 made out of the next 4 shots)
+------------------------------------------------------------------------------
+  n = 4, k = 3, p = P(Make) = 0.4902
+  Manual : C(4,3) * p^3 * (1-p)^1
+         = 4 * 0.4902^3 * 0.5098^1
+         = 0.240241
+  Library: scipy.stats.binom.pmf(3, 4, p) = 0.240241
+  Result : 0.2402  (24.02%)
+  Match  : YES  (difference = 2.78e-17)
+
+4B) P(exactly 4 of the next 5 shots are three-pointers)
+------------------------------------------------------------------------------
+  n = 5, k = 4, p = P(3-pointer) = 0.5481
+  Manual : C(5,4) * p^4 * (1-p)^1
+         = 5 * 0.5481^4 * 0.4519^1
+         = 0.203934
+  Library: scipy.stats.binom.pmf(4, 5, p) = 0.203934
+  Result : 0.2039  (20.39%)
+  Match  : YES  (difference = 2.78e-17)
+
+4C) ASSUMPTIONS OF THE BINOMIAL DISTRIBUTION
+------------------------------------------------------------------------------
+  1. A fixed number of trials (n).
+     Every shot is one trial, and n is decided in advance (4 shots, 5 shots).
+
+  2. Each trial has exactly two possible outcomes (success / failure).
+     A shot is either made or missed, so this one is satisfied - "make" is
+     success for 4A, "three-pointer" is success for 4B.
+
+  3. The trials are independent.
+     The outcome of one shot must not affect the others. This is the weakest
+     assumption in basketball: shooters ride hot/cold streaks, defenders adjust,
+     and fatigue accumulates during a game, so consecutive shots are only
+     approximately independent.
+
+  4. The probability of success p is constant for every trial.
+     p is estimated from the whole season, but the true probability varies with
+     distance, shot difficulty, defender pressure, quarter, and game situation
+     (e.g. garbage time vs. clutch time). Treating p as one fixed number is
+     therefore a simplification.
+
+  Do the assumptions hold? Partially.
+    - Assumptions 1 and 2 hold exactly: n is chosen by us and a shot is binary.
+    - Assumption 3 (independence) is approximately true at best. Shot outcomes
+      are close to independent across a large sample, but "hot hand" effects,
+      defensive schemes and fatigue can create serial dependence.
+    - Assumption 4 (constant p) is clearly violated in spirit: shot quality
+      differs a lot (layup vs. deep three, open vs. contested). The season-wide
+      p is an average over very different situations.
+  Practical consequence: the binomial probabilities above are useful ballpark
+  estimates under an "all shots are alike and independent" model, and should be
+  read as approximations rather than exact forecasts.
+
+==============================================================================
+STEP 5: CONDITIONAL PROBABILITIES - FUTURE (FORWARD-LOOKING)
+==============================================================================
+
+-- Joint and marginal counts (directly from the data) --
+  Made 3-pointers            count(3 AND Made)  =  329
+  3-pointers with a lead     count(3 AND Lead)  =  388
+  Made 2-pointers            count(2 AND Made)  =  374
+  2-pointers with a lead     count(2 AND Lead)  =  334
+
+  count(3-pointers)  =  786   count(2-pointers)  =  648
+  count(Made)        =  703   count(Lead)        =  722
+  count(All shots)   = 1,434
+
+-- Conditional probabilities: direct count vs. Bayes' Theorem --
+------------------------------------------------------------------------------
+
+  P(Made|3) = P(3|Made) * P(Made) / P(3)
+    P(B|A) * P(A) / P(B) = 0.467994 * 0.490237 / 0.548117
+    Bayes' Theorem  : 0.418575
+    Direct counting : 0.418575
+    Match           : YES  (difference = 5.55e-17)
+    Result          : 0.4186  (41.86%)
+
+  P(Lead|3) = P(3|Lead) * P(Lead) / P(3)
+    P(B|A) * P(A) / P(B) = 0.537396 * 0.503487 / 0.548117
+    Bayes' Theorem  : 0.493639
+    Direct counting : 0.493639
+    Match           : YES  (difference = 1.11e-16)
+    Result          : 0.4936  (49.36%)
+
+  P(Made|2) = P(2|Made) * P(Made) / P(2)
+    P(B|A) * P(A) / P(B) = 0.532006 * 0.490237 / 0.451883
+    Bayes' Theorem  : 0.577160
+    Direct counting : 0.577160
+    Match           : YES  (difference = 1.11e-16)
+    Result          : 0.5772  (57.72%)
+
+  P(Lead|2) = P(2|Lead) * P(Lead) / P(2)
+    P(B|A) * P(A) / P(B) = 0.462604 * 0.503487 / 0.451883
+    Bayes' Theorem  : 0.515432
+    Direct counting : 0.515432
+    Match           : YES  (difference = 1.11e-16)
+    Result          : 0.5154  (51.54%)
+
+==============================================================================
+STEP 6: CONDITIONAL PROBABILITIES - PAST (RETROSPECTIVE) VIA BAYES
+==============================================================================
+
+-- Notation mapping --
+  P(Made)     = 0.490237   (Step 3)
+  P(3)        = 0.548117   (Step 3)
+  P(2)        = 0.451883   (Step 3)
+  P(Made | 3) = 0.418575   (Step 5)
+  P(Made | 2) = 0.577160   (Step 5)
+
+-- P(3 | Made): given that a shot went in, was it a three? --
+------------------------------------------------------------------------------
+  P(3|Made) = P(Made|3) * P(3) / P(Made)
+  Step 1: P(Made|3) = 0.418575
+  Step 2: P(3)      = 0.548117
+  Step 3: P(Made|3) * P(3) = 0.229428   <- P(Made AND 3)
+  Step 4: P(Made)   = 0.490237
+  Step 5: P(3|Made) = 0.229428 / 0.490237 = 0.467994
+  Result: 0.4680  (46.80%)
+
+-- P(2 | Made): given that a shot went in, was it a two? --
+------------------------------------------------------------------------------
+  P(2|Made) = P(Made|2) * P(2) / P(Made)
+  Step 1: P(Made|2) = 0.577160
+  Step 2: P(2)      = 0.451883
+  Step 3: P(Made|2) * P(2) = 0.260809   <- P(Made AND 2)
+  Step 4: P(Made)   = 0.490237
+  Step 5: P(2|Made) = 0.260809 / 0.490237 = 0.532006
+  Result: 0.5320  (53.20%)
+
+-- Sanity check --
+  P(3|Made) + P(2|Made) = 0.467994 + 0.532006 = 1.000000
+  Approximately 1.0: YES
+
+==============================================================================
+STEP 7: SUMMARY - SLIDE-BY-SLIDE PROBABILITIES
+==============================================================================
+
+=== SLIDE 1: Overall Shooting Statistics ===
+  Total shots analysed      : 1,434
+  P(Make)                   : 0.4902  (49.02%)
+  P(Miss)                   : 0.5098  (50.98%)
+  P(3-pointer)              : 0.5481  (54.81%)
+  P(2-pointer)              : 0.4519  (45.19%)
+
+=== SLIDE 2: Binomial Probabilities ===
+  P(exactly 3 made of next 4 shots)     : 0.2402  (24.02%)
+  P(exactly 4 of next 5 are 3-pointers) : 0.2039  (20.39%)
+  Assumptions: fixed n, binary outcomes, independent trials, constant p.
+  Independence and constant p hold only approximately for shot data.
+
+=== SLIDE 3: Conditional Probabilities - Future ===
+  P(Made | 3-pointer)       : 0.4186  (41.86%)
+  P(Lead | 3-pointer)       : 0.4936  (49.36%)
+  P(Made | 2-pointer)       : 0.5772  (57.72%)
+  P(Lead | 2-pointer)       : 0.5154  (51.54%)
+
+  Supporting quantities:
+    P(Made)                 : 0.4902  (49.02%)
+    P(3)                    : 0.5481  (54.81%)
+    P(2)                    : 0.4519  (45.19%)
+    P(Lead)                 : 0.5035  (50.35%)
+    P(3 | Lead)             : 0.5374  (53.74%)
+    P(2 | Lead)             : 0.4626  (46.26%)
+    P(Made | 3) x P(3)      : 0.2294  (22.94%)
+    P(Made | 2) x P(2)      : 0.2608  (26.08%)
+
+=== SLIDE 4: Conditional Probabilities - Past ===
+  P(3-pointer | Made)       : 0.4680  (46.80%)
+  P(2-pointer | Made)       : 0.5320  (53.20%)
+  Sanity check (sum = 1.0)  : 1.000000
+
+==============================================================================
+END OF REPORT
+==============================================================================
+
+[ok]   Full output saved to: C:\udacity\Statistics-for-Data-Analysis\Udacity_Statistics-Data-Analysis_P2_Basketball_Scoring_Probabilities\curry_probability_summary.txt
